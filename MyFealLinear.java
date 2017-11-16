@@ -1,5 +1,4 @@
 import java.io.*;
-import javax.xml.bind.DatatypeConverter;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -38,7 +37,7 @@ public class MyFealLinear {
 
     private static void readKnownTextPairs() {
         try {
-            BufferedReader bufferedReader = new BufferedReader(new FileReader("known.txt"));
+            BufferedReader bufferedReader = new BufferedReader(new FileReader("known_mine.txt"));
 
             int count = 0;
             boolean isPlainText = true;
@@ -287,10 +286,31 @@ public class MyFealLinear {
         return a1^a2^a3;
     }
 
-    private static void testKeys(int k0, int k1, int k2, int k3, int k4, int k5) {
+    private static void testKeys(int key0, int key1, int key2, int key3) {
+        int L0 = getLeft(plaintext[0]);
+        int R0 = getRigth(plaintext[0]);
+        int L4 = getLeft(cyphertext[0]);
+        int R4 = getRigth(cyphertext[0]);
+
+        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key0)));
+        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key1)));
+        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key2)));
+        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key3)));
+
+        int left = L0^R0^y1^y3;
+
+        int key4 = left^L4;
+        int key5 = left^L0^y0^y2^R4;
+
+        key0 = Integer.reverseBytes(key0);
+        key1 = Integer.reverseBytes(key1);
+        key2 = Integer.reverseBytes(key2);
+        key3 = Integer.reverseBytes(key3);
+        key4 = Integer.reverseBytes(key4);
+        key5 = Integer.reverseBytes(key5);
 
         byte[] data = new byte[8];
-        int key[]={k0, k1, k2, k3, k4, k5};
+        int key[] = {key0, key1, key2, key3, key4, key5};
 
         for(int w=0; w<text_count; w++) {
             String p_word = plaintext[w];
@@ -309,14 +329,53 @@ public class MyFealLinear {
                 return;
         }
 
-        System.out.println("K0: " + Integer.toHexString(k0));
-        System.out.println("K1: " + Integer.toHexString(k1));
-        System.out.println("K2: " + Integer.toHexString(k2));
-        System.out.println("K3: " + Integer.toHexString(k3));
-        System.out.println("K4: " + Integer.toHexString(k4));
-        System.out.println("K5: " + Integer.toHexString(k5));
+        System.out.println("K0: " + Integer.toHexString(key0));
+        System.out.println("K1: " + Integer.toHexString(key1));
+        System.out.println("K2: " + Integer.toHexString(key2));
+        System.out.println("K3: " + Integer.toHexString(key3));
+        System.out.println("K4: " + Integer.toHexString(key4));
+        System.out.println("K5: " + Integer.toHexString(key5));
         System.out.println("************ Profit ************");
 
+    }
+
+    private static void attackK3(int key0, int key1, int key2){
+
+        Set<Integer> candidateKeysk3 = new HashSet<Integer>();
+        Set<Integer> candidateKeysk3T = new HashSet<Integer>();
+
+        for(int k=0; k<4096; k++) {
+            int key_tilda = generate12BitKeyForInnerBytes(k);
+            int first_a = calculateConstInnerBytesk3(0, key_tilda, key0, key1, key2);
+
+            for(int w=1; w<text_count; w++) {
+                if(first_a != calculateConstInnerBytesk3(w, key_tilda,  key0, key1, key2))
+                    break;
+
+                if(w == text_count-1 && !candidateKeys.contains(key_tilda)) {
+                    // System.out.println(getBitString(key));
+                    candidateKeysk3T.add(key_tilda);
+                }
+            }
+        }
+
+        for(int k=0; k<18576; k++) {
+            for(int key_tilda: candidateKeysk3T) {
+                int key3 = generate20BitKeyForOutterBytes(k, key_tilda);
+                    int first_a = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
+
+                    for(int w=1; w<text_count; w++) {
+                        if(first_a != calculateConstOutteBytesk3(w, key3, key0, key1, key2))
+                            break;
+
+                        if(w == text_count-1) {
+                            // System.out.println(getBitString(Integer.reverseBytes(key)));
+                            candidateKeysk3.add(key3);
+                            testKeys(key0, key1, key2, key3);
+                        }
+                    }
+            }
+        }
     }
 
     public static void main(String [] args) {
@@ -389,7 +448,7 @@ public class MyFealLinear {
 
         System.out.println("K1");
 
-        for(int k=0; k<1048576; k++) {
+        for(int k=0; k<18576; k++) {
             for(int key_tilda: candidateKeys) {
                 int key = generate20BitKeyForOutterBytes(k, key_tilda);
 
@@ -440,7 +499,7 @@ public class MyFealLinear {
 
         System.out.println("K2");
 
-        for(int k=0; k<1048576; k++) {
+        for(int k=0; k<18576; k++) {
             for(int key_tilda: candidateKeys) {
                 int key = generate20BitKeyForOutterBytes(k, key_tilda);
 
@@ -453,8 +512,9 @@ public class MyFealLinear {
                                 break;
 
                             if(w == text_count-1) {
-                                System.out.println(getBitString(Integer.reverseBytes(key)));
+                                // System.out.println(getBitString(Integer.reverseBytes(key)));
                                 candidateKeysk2.add(key);
+                                attackK3(key0, key1, key);
                             }
                         }
                     }
@@ -462,113 +522,62 @@ public class MyFealLinear {
             }
         }
 
-        System.out.println("K3~");
-
-        candidateKeys = new HashSet<Integer>();
-
-        for(int k=0; k<4096; k++) {
-            int key = generate12BitKeyForInnerBytes(k);
-
-            for(int key0: candidateKeysk0) {
-
-                for(int key1: candidateKeysk1) {
-
-                    for(int key2: candidateKeysk2) {
-
-                        int first_a = calculateConstInnerBytesk3(0, key, key0, key1, key2);
-
-                        for(int w=1; w<text_count; w++) {
-                            if(first_a != calculateConstInnerBytesk3(w, key,  key0, key1, key2))
-                                break;
-
-                            if(w == text_count-1 && !candidateKeys.contains(key)) {
-                                System.out.println(getBitString(key));
-                                candidateKeys.add(key);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Set<Integer> candidateKeysk3 = new HashSet<Integer>();
-
-        System.out.println("K3");
-
-        for(int k=0; k<1048576; k++) {
-            for(int key_tilda: candidateKeys) {
-                int key = generate20BitKeyForOutterBytes(k, key_tilda);
-
-                for(int key0: candidateKeysk0) {
-                    for(int key1: candidateKeysk1) {
-                        for(int key2: candidateKeysk2) {
-                            int first_a = calculateConstOutteBytesk3(0, key, key0, key1, key2);
-
-                            for(int w=1; w<text_count; w++) {
-                                if(first_a != calculateConstOutteBytesk3(w, key, key0, key1, key2))
-                                    break;
-
-                                if(w == text_count-1) {
-                                    System.out.println(getBitString(Integer.reverseBytes(key)));
-                                    candidateKeysk3.add(key);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Set<Integer> candidateKeysk4 = new HashSet<Integer>();
-        Set<Integer> candidateKeysk5 = new HashSet<Integer>();
-
-        System.out.println("K4 - K5");
-
-        for(int key0: candidateKeysk0) {
-            for(int key1: candidateKeysk1) {
-                for(int key2: candidateKeysk2) {
-                    for(int key3: candidateKeysk3) {
-                        int L0 = getLeft(plaintext[0]);
-                        int R0 = getRigth(plaintext[0]);
-                        int L4 = getLeft(cyphertext[0]);
-                        int R4 = getRigth(cyphertext[0]);
-
-                        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key0)));
-                        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key1)));
-                        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key2)));
-                        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key3)));
-
-                        int left = L0^R0^y1^y3;
-
-                        candidateKeysk4.add(left^L4);
-                        candidateKeysk5.add(left^L0^y0^y2^R4);
-                    }
-                }
-            }
-        }
-
-        System.out.println("Possible Key combinations:");
-
-        for(int key0: candidateKeysk0) {
-            for(int key1: candidateKeysk1) {
-                for(int key2: candidateKeysk2) {
-                    for(int key3: candidateKeysk3) {
-                        for(int key4: candidateKeysk4) {
-                            for(int key5: candidateKeysk5) {
-                                testKeys(
-                                    Integer.reverseBytes(key0),
-                                    Integer.reverseBytes(key1),
-                                    Integer.reverseBytes(key2),
-                                    Integer.reverseBytes(key3),
-                                    Integer.reverseBytes(key4),
-                                    Integer.reverseBytes(key5)
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // System.out.println("K3~");
+        //
+        // candidateKeys = new HashSet<Integer>();
+        //
+        // for(int k=0; k<4096; k++) {
+        //     int key = generate12BitKeyForInnerBytes(k);
+        //
+        //     for(int key0: candidateKeysk0) {
+        //
+        //         for(int key1: candidateKeysk1) {
+        //
+        //             for(int key2: candidateKeysk2) {
+        //
+        //                 int first_a = calculateConstInnerBytesk3(0, key, key0, key1, key2);
+        //
+        //                 for(int w=1; w<text_count; w++) {
+        //                     if(first_a != calculateConstInnerBytesk3(w, key,  key0, key1, key2))
+        //                         break;
+        //
+        //                     if(w == text_count-1 && !candidateKeys.contains(key)) {
+        //                         System.out.println(getBitString(key));
+        //                         candidateKeys.add(key);
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        //
+        // Set<Integer> candidateKeysk3 = new HashSet<Integer>();
+        //
+        // System.out.println("K3");
+        //
+        // for(int k=0; k<18576; k++) {
+        //     for(int key_tilda: candidateKeys) {
+        //         int key3 = generate20BitKeyForOutterBytes(k, key_tilda);
+        //
+        //         for(int key0: candidateKeysk0) {
+        //             for(int key1: candidateKeysk1) {
+        //                 for(int key2: candidateKeysk2) {
+        //                     int first_a = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
+        //
+        //                     for(int w=1; w<text_count; w++) {
+        //                         if(first_a != calculateConstOutteBytesk3(w, key3, key0, key1, key2))
+        //                             break;
+        //
+        //                         if(w == text_count-1) {
+        //                             // System.out.println(getBitString(Integer.reverseBytes(key)));
+        //                             candidateKeysk3.add(key3);
+        //                             testKeys(key0, key1, key2, key3);
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
-
