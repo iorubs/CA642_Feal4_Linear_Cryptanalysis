@@ -339,41 +339,107 @@ public class MyFealLinear {
 
     }
 
-    private static void attackK3(int key0, int key1, int key2){
+    private static void attackK3(int key0, int key1, int key2) {
 
         Set<Integer> candidateKeysk3 = new HashSet<Integer>();
-        Set<Integer> candidateKeysk3T = new HashSet<Integer>();
 
-        for(int k=0; k<4096; k++) {
-            int key_tilda = generate12BitKeyForInnerBytes(k);
-            int first_a = calculateConstInnerBytesk3(0, key_tilda, key0, key1, key2);
+        for(int k1=0; k1<4096; k1++) {
+            int key_tilda = generate12BitKeyForInnerBytes(k1);
+            int first_a1 = calculateConstInnerBytesk3(0, key_tilda, key0, key1, key2);
 
-            for(int w=1; w<text_count; w++) {
-                if(first_a != calculateConstInnerBytesk3(w, key_tilda,  key0, key1, key2))
+            for(int w1=1; w1<text_count; w1++) {
+                if(first_a1 != calculateConstInnerBytesk3(w1, key_tilda,  key0, key1, key2))
                     break;
 
-                if(w == text_count-1 && !candidateKeys.contains(key_tilda)) {
+                if(w1 == text_count-1) {
                     // System.out.println(getBitString(key));
-                    candidateKeysk3T.add(key_tilda);
+
+                    for(int k2=0; k2<18576; k2++) {
+                        int key3 = generate20BitKeyForOutterBytes(k2, key_tilda);
+                        int first_a2 = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
+
+                        for(int w2=1; w2<text_count; w2++) {
+                            if(first_a2 != calculateConstOutteBytesk3(w2, key3, key0, key1, key2))
+                                break;
+
+                            if(w2 == text_count-1) {
+                                // System.out.println(getBitString(Integer.reverseBytes(key)));
+                                candidateKeysk3.add(key3);
+                                testKeys(key0, key1, key2, key3);
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
 
-        for(int k=0; k<18576; k++) {
-            for(int key_tilda: candidateKeysk3T) {
-                int key3 = generate20BitKeyForOutterBytes(k, key_tilda);
-                    int first_a = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
+    private static void attackK2(int key0, int key1) {
 
-                    for(int w=1; w<text_count; w++) {
-                        if(first_a != calculateConstOutteBytesk3(w, key3, key0, key1, key2))
-                            break;
+        Set<Integer> candidateKeysk2 = new HashSet<Integer>();
 
-                        if(w == text_count-1) {
-                            // System.out.println(getBitString(Integer.reverseBytes(key)));
-                            candidateKeysk3.add(key3);
-                            testKeys(key0, key1, key2, key3);
+        for(int k1=0; k1<4096; k1++) {
+            int key_tilda = generate12BitKeyForInnerBytes(k1);
+            int first_a1 = calculateConstInnerBytesk2(0, key_tilda, key0, key1);
+
+            for(int w1=1; w1<text_count; w1++) {
+                if(first_a1 != calculateConstInnerBytesk2(w1, key_tilda,  key0, key1))
+                    break;
+
+                if(w1 == text_count-1) {
+                    // System.out.println(getBitString(key));
+
+                    for(int k2=0; k2<18576; k2++) {
+                        int key2 = generate20BitKeyForOutterBytes(k2, key_tilda);
+                        int first_a2 = calculateConstOutteBytesk2(0, key2, key0, key1);
+
+                        for(int w2=1; w2<text_count; w2++) {
+                            if(first_a2 != calculateConstOutteBytesk2(w2, key2, key0, key1))
+                                break;
+
+                            if(w2 == text_count-1) {
+                                // System.out.println(getBitString(Integer.reverseBytes(key)));
+                                candidateKeysk2.add(key2);
+                                attackK3(key0, key1, key2);
+                            }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    private static void attackK1(int key0) {
+
+        Set<Integer> candidateKeysk1 = new HashSet<Integer>();
+
+        for(int k1=0; k1<4096; k1++) {
+            int key_tilda = generate12BitKeyForInnerBytes(k1);
+            int first_a1 = calculateConstInnerBytesk1(0, key_tilda, key0);
+
+            for(int w1=1; w1<text_count; w1++) {
+                if(first_a1 != calculateConstInnerBytesk1(w1, key_tilda,  key0))
+                    break;
+
+                if(w1 == text_count-1) {
+                    // System.out.println(getBitString(key));
+
+                    for(int k2=0; k2<18576; k2++) {
+                        int key1 = generate20BitKeyForOutterBytes(k2, key_tilda);
+                        int first_a2 = calculateConstOutteBytesk1(0, key1, key0);
+
+                        for(int w2=1; w2<text_count; w2++) {
+                            if(first_a2 != calculateConstOutteBytesk1(w2, key1, key0))
+                                break;
+
+                            if(w2 == text_count-1) {
+                                // System.out.println(getBitString(Integer.reverseBytes(key)));
+                                candidateKeysk1.add(key1);
+                                attackK2(key0, key1);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -381,7 +447,7 @@ public class MyFealLinear {
     public static void main(String [] args) {
         readKnownTextPairs();
 
-        System.out.println("K0~");
+        System.out.println("Linear Analysis of Feal 4");
 
         for(int k=0; k<4096; k++) {
             int key = generate12BitKeyForInnerBytes(k);
@@ -413,171 +479,12 @@ public class MyFealLinear {
                         break;
 
                     if(w == text_count-1) {
-                        System.out.println(getBitString(Integer.reverseBytes(key)));
+                        // System.out.println(getBitString(Integer.reverseBytes(key)));
                         candidateKeysk0.add(key);
+                        attackK1(key);
                     }
                 }
             }
         }
-
-
-        System.out.println("K1~");
-
-        candidateKeys = new HashSet<Integer>();
-
-        for(int k=0; k<4096; k++) {
-            int key = generate12BitKeyForInnerBytes(k);
-
-            for(int key0: candidateKeysk0) {
-
-                int first_a = calculateConstInnerBytesk1(0, key, key0);
-
-                for(int w=1; w<text_count; w++) {
-                    if(first_a != calculateConstInnerBytesk1(w, key, key0))
-                        break;
-
-                    if(w == text_count-1) {
-                        System.out.println(getBitString(key));
-                        candidateKeys.add(key);
-                    }
-                }
-            }
-        }
-
-        Set<Integer> candidateKeysk1 = new HashSet<Integer>();
-
-        System.out.println("K1");
-
-        for(int k=0; k<18576; k++) {
-            for(int key_tilda: candidateKeys) {
-                int key = generate20BitKeyForOutterBytes(k, key_tilda);
-
-                for(int key0: candidateKeysk0) {
-                    int first_a = calculateConstOutteBytesk1(0, key, key0);
-
-                    for(int w=1; w<text_count; w++) {
-                        if(first_a != calculateConstOutteBytesk1(w, key, key0))
-                            break;
-
-                        if(w == text_count-1) {
-                            System.out.println(getBitString(Integer.reverseBytes(key)));
-                            candidateKeysk1.add(key);
-                        }
-                    }
-                }
-            }
-        }
-
-        System.out.println("K2~");
-
-        candidateKeys = new HashSet<Integer>();
-
-        for(int k=0; k<4096; k++) {
-            int key = generate12BitKeyForInnerBytes(k);
-
-            for(int key0: candidateKeysk0) {
-
-                for(int key1: candidateKeysk1) {
-
-                    int first_a = calculateConstInnerBytesk2(0, key, key0, key1);
-
-                    for(int w=1; w<text_count; w++) {
-                        if(first_a != calculateConstInnerBytesk2(w, key,  key0, key1))
-                            break;
-
-                        if(w == text_count-1 && !candidateKeys.contains(key)) {
-                            System.out.println(getBitString(key));
-                            candidateKeys.add(key);
-                        }
-                    }
-                }
-            }
-        }
-
-
-        Set<Integer> candidateKeysk2 = new HashSet<Integer>();
-
-        System.out.println("K2");
-
-        for(int k=0; k<18576; k++) {
-            for(int key_tilda: candidateKeys) {
-                int key = generate20BitKeyForOutterBytes(k, key_tilda);
-
-                for(int key0: candidateKeysk0) {
-                    for(int key1: candidateKeysk1) {
-                        int first_a = calculateConstOutteBytesk2(0, key, key0, key1);
-
-                        for(int w=1; w<text_count; w++) {
-                            if(first_a != calculateConstOutteBytesk2(w, key, key0, key1))
-                                break;
-
-                            if(w == text_count-1) {
-                                // System.out.println(getBitString(Integer.reverseBytes(key)));
-                                candidateKeysk2.add(key);
-                                attackK3(key0, key1, key);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // System.out.println("K3~");
-        //
-        // candidateKeys = new HashSet<Integer>();
-        //
-        // for(int k=0; k<4096; k++) {
-        //     int key = generate12BitKeyForInnerBytes(k);
-        //
-        //     for(int key0: candidateKeysk0) {
-        //
-        //         for(int key1: candidateKeysk1) {
-        //
-        //             for(int key2: candidateKeysk2) {
-        //
-        //                 int first_a = calculateConstInnerBytesk3(0, key, key0, key1, key2);
-        //
-        //                 for(int w=1; w<text_count; w++) {
-        //                     if(first_a != calculateConstInnerBytesk3(w, key,  key0, key1, key2))
-        //                         break;
-        //
-        //                     if(w == text_count-1 && !candidateKeys.contains(key)) {
-        //                         System.out.println(getBitString(key));
-        //                         candidateKeys.add(key);
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-        //
-        // Set<Integer> candidateKeysk3 = new HashSet<Integer>();
-        //
-        // System.out.println("K3");
-        //
-        // for(int k=0; k<18576; k++) {
-        //     for(int key_tilda: candidateKeys) {
-        //         int key3 = generate20BitKeyForOutterBytes(k, key_tilda);
-        //
-        //         for(int key0: candidateKeysk0) {
-        //             for(int key1: candidateKeysk1) {
-        //                 for(int key2: candidateKeysk2) {
-        //                     int first_a = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
-        //
-        //                     for(int w=1; w<text_count; w++) {
-        //                         if(first_a != calculateConstOutteBytesk3(w, key3, key0, key1, key2))
-        //                             break;
-        //
-        //                         if(w == text_count-1) {
-        //                             // System.out.println(getBitString(Integer.reverseBytes(key)));
-        //                             candidateKeysk3.add(key3);
-        //                             testKeys(key0, key1, key2, key3);
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
     }
 }
