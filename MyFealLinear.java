@@ -37,7 +37,7 @@ public class MyFealLinear {
 
     private static void readKnownTextPairs() {
         try {
-            BufferedReader bufferedReader = new BufferedReader(new FileReader("known_mine.txt"));
+            BufferedReader bufferedReader = new BufferedReader(new FileReader("known_geoff.txt"));
 
             int count = 0;
             boolean isPlainText = true;
@@ -300,7 +300,10 @@ public class MyFealLinear {
         int left = L0^R0^y1^y3;
 
         int key4 = left^L4;
+        // System.out.println(getBitString(Integer.reverseBytes(key4)));
+
         int key5 = left^L0^y0^y2^R4;
+        // System.out.println(getBitString(Integer.reverseBytes(key5)));
 
         key0 = Integer.reverseBytes(key0);
         key1 = Integer.reverseBytes(key1);
@@ -352,9 +355,9 @@ public class MyFealLinear {
                     break;
 
                 if(w1 == text_count-1) {
-                    // System.out.println(getBitString(key));
+                    // System.out.println(getBitString(key_tilda));
 
-                    for(int k2=0; k2<18576; k2++) {
+                    for(int k2=0; k2<1048576; k2++) {
                         int key3 = generate20BitKeyForOutterBytes(k2, key_tilda);
                         int first_a2 = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
 
@@ -363,7 +366,7 @@ public class MyFealLinear {
                                 break;
 
                             if(w2 == text_count-1) {
-                                // System.out.println(getBitString(Integer.reverseBytes(key)));
+                                // System.out.println(getBitString(Integer.reverseBytes(key3)));
                                 candidateKeysk3.add(key3);
                                 testKeys(key0, key1, key2, key3);
                             }
@@ -387,9 +390,9 @@ public class MyFealLinear {
                     break;
 
                 if(w1 == text_count-1) {
-                    // System.out.println(getBitString(key));
+                    // System.out.println(getBitString(key_tilda));
 
-                    for(int k2=0; k2<18576; k2++) {
+                    for(int k2=0; k2<1048576; k2++) {
                         int key2 = generate20BitKeyForOutterBytes(k2, key_tilda);
                         int first_a2 = calculateConstOutteBytesk2(0, key2, key0, key1);
 
@@ -398,7 +401,7 @@ public class MyFealLinear {
                                 break;
 
                             if(w2 == text_count-1) {
-                                // System.out.println(getBitString(Integer.reverseBytes(key)));
+                                // System.out.println(getBitString(Integer.reverseBytes(key2)));
                                 candidateKeysk2.add(key2);
                                 attackK3(key0, key1, key2);
                             }
@@ -422,9 +425,9 @@ public class MyFealLinear {
                     break;
 
                 if(w1 == text_count-1) {
-                    // System.out.println(getBitString(key));
+                    // System.out.println(getBitString(key_tilda));
 
-                    for(int k2=0; k2<18576; k2++) {
+                    for(int k2=0; k2<1048576; k2++) {
                         int key1 = generate20BitKeyForOutterBytes(k2, key_tilda);
                         int first_a2 = calculateConstOutteBytesk1(0, key1, key0);
 
@@ -433,8 +436,7 @@ public class MyFealLinear {
                                 break;
 
                             if(w2 == text_count-1) {
-                                // System.out.println(getBitString(Integer.reverseBytes(key)));
-                                candidateKeysk1.add(key1);
+                                // System.out.println(getBitString(Integer.reverseBytes(key1)));
                                 attackK2(key0, key1);
                             }
                         }
@@ -449,39 +451,31 @@ public class MyFealLinear {
 
         System.out.println("Linear Analysis of Feal 4");
 
-        for(int k=0; k<4096; k++) {
-            int key = generate12BitKeyForInnerBytes(k);
-            int first_a = calculateConstInnerBytes(0, key);
+        for(int k1=0; k1<4096; k1++) {
+            int key_tilda = generate12BitKeyForInnerBytes(k1);
+            int first_a1 = calculateConstInnerBytes(0, key_tilda);
 
             // 200 equals number of pairs
-            for(int w=1; w<text_count; w++) {
-                if(first_a != calculateConstInnerBytes(w, key))
+            for(int w1=1; w1<text_count; w1++) {
+                if(first_a1 != calculateConstInnerBytes(w1, key_tilda))
                     break;
 
-                if(w == text_count-1) {
-                    System.out.println(getBitString(key));
-                    candidateKeys.add(key);
-                }
-            }
-        }
+                if(w1 == text_count-1) {
+                    // System.out.println(getBitString(key_tilda));
 
-        Set<Integer> candidateKeysk0 = new HashSet<Integer>();
+                    for(int k2=0; k2<1048576; k2++) {
+                        int key0 = generate20BitKeyForOutterBytes(k2, key_tilda);
+                        int first_a2 = calculateConstOutteBytes(0, key0);
 
-        System.out.println("K0");
+                        for(int w2=1; w2<text_count; w2++) {
+                            if(first_a2 != calculateConstOutteBytes(w2, key0))
+                                break;
 
-        for(int k=0; k<1048576; k++) {
-            for(int key_tilda: candidateKeys) {
-                int key = generate20BitKeyForOutterBytes(k, key_tilda);
-                int first_a = calculateConstOutteBytes(0, key);
-
-                for(int w=1; w<text_count; w++) {
-                    if(first_a != calculateConstOutteBytes(w, key))
-                        break;
-
-                    if(w == text_count-1) {
-                        // System.out.println(getBitString(Integer.reverseBytes(key)));
-                        candidateKeysk0.add(key);
-                        attackK1(key);
+                            if(w2 == text_count-1) {
+                                // System.out.println(getBitString(Integer.reverseBytes(key0)));
+                                attackK1(key0);
+                            }
+                        }
                     }
                 }
             }
