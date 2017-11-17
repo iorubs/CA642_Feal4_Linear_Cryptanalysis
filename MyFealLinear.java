@@ -310,7 +310,6 @@ public class MyFealLinear {
         }
     }
 
-
     private static void attackK3(int key0, int key1, int key2) {
         for(int k1=0; k1<4096; k1++) {
             int key_tilda = generate12BitKeyForInnerBytes(k1);
@@ -351,15 +350,12 @@ public class MyFealLinear {
 
         int left = L0^R0^y1^y3;
 
-        int key4 = left^L4;
-        int key5 = left^L0^y0^y2^R4;
-
         key0 = Integer.reverseBytes(key0);
         key1 = Integer.reverseBytes(key1);
         key2 = Integer.reverseBytes(key2);
         key3 = Integer.reverseBytes(key3);
-        key4 = Integer.reverseBytes(key4);
-        key5 = Integer.reverseBytes(key5);
+        int key4 = Integer.reverseBytes(left^L4);
+        int key5 = Integer.reverseBytes(left^L0^y0^y2^R4);
 
         byte[] data = new byte[8];
         int key[] = {key0, key1, key2, key3, key4, key5};
@@ -381,14 +377,13 @@ public class MyFealLinear {
                 return;
         }
 
-        System.out.println("K0: " + Integer.toHexString(key0));
-        System.out.println("K1: " + Integer.toHexString(key1));
-        System.out.println("K2: " + Integer.toHexString(key2));
-        System.out.println("K3: " + Integer.toHexString(key3));
-        System.out.println("K4: " + Integer.toHexString(key4));
-        System.out.println("K5: " + Integer.toHexString(key5));
+        System.out.print("K0 0x" + Integer.toHexString(key0));
+        System.out.print("\tK1 0x" + Integer.toHexString(key1));
+        System.out.print("\tK2 0x" + Integer.toHexString(key2));
+        System.out.print("\tK3 0x" + Integer.toHexString(key3));
+        System.out.print("\tK4 0x" + Integer.toHexString(key4));
+        System.out.println("\tK5 0x" + Integer.toHexString(key5));
         System.out.println("************ Profit ************");
-
     }
 
     public static void main(String [] args) {
