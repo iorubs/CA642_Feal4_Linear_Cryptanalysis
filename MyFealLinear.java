@@ -1,21 +1,13 @@
 import java.io.*;
-import java.util.HashSet;
-import java.util.Set;
 
 public class MyFealLinear {
 
-    static int text_count = 200;
-    static String plaintext[] = new String[text_count];
-    static String cyphertext[] = new String[text_count];
-    static Set<Integer> candidateKeys = new HashSet<Integer>();
+    static int num_pairs = 200;
+    static String plaintext[] = new String[num_pairs];
+    static String cyphertext[] = new String[num_pairs];
 
     private static int getBit(int num, int n) {
-        return (num >> n) & 1;
-    }
-
-    private static int getBit2(int num, int n) {
-        n = 31-n;
-        return (num >> n) & 1;
+        return (num >> (31-n)) & 1;
     }
 
     private static int getLeft(String word_64) {
@@ -24,15 +16,6 @@ public class MyFealLinear {
 
     private static int getRigth(String word_64) {
         return (int) Long.parseLong(word_64.substring(8), 16);
-    }
-
-    private static String getBitString(int num) {
-        String temp = "";
-
-        for(int i=31; i>=0; i--)
-            temp += getBit(num, i);
-
-        return temp;
     }
 
     private static void readKnownTextPairs() {
@@ -46,7 +29,6 @@ public class MyFealLinear {
 
             while(line != null && count < plaintext.length) {
                 if(line.length() != 0) {
-
                     if(isPlainText) {
                         plaintext[count] = line.substring(12);
                     }
@@ -64,23 +46,32 @@ public class MyFealLinear {
             bufferedReader.close();
         }
         catch(FileNotFoundException e) {
-            System.out.println("Could not find file: known.txt");
+            System.out.println("Could not find input file.");
         }
         catch(IOException e) {
-            System.out.println("Unable to read file: IOException");
+            System.out.println("Unable to read input file: IOException");
         }
     }
 
     private static int generate12BitKeyForInnerBytes(int k) {
-        // K~ = (0, Kb1⊕Kb2, Kb3⊕Kb4, 0)
-        // K~ = Keep 10-15, 18-23 and zero's for 24-32, 16-17.
-        int a0 = (k >> 6) & 0x3F;
-        int a1 = k & 0x3F;
-
-        return (a0 << 16) + (a1 << 8) ;
+        // K~ = Keep 10-15, 18-23 and zero's for 0-9, 24-31, 16-17.
+        return (((k >> 6) & 0x3F) << 16) + ((k & 0x3F) << 8) ;
     }
 
-    static int calculateConstInnerBytes(int wordIndex, int key) {
+    private static int generate20BitKeyForOutterBytes(int k, int key_tilda) {
+        int a0 = (((k & 0xF) >> 2) << 6) + ((key_tilda >> 16) & 0xFF);
+        int a1 = ((k & 0x3) << 6) + ((key_tilda >> 8) & 0xFF);
+
+        int b0 = (k >> 12) & 0xFF;
+        int b3 = (k >> 4) & 0xFF;
+
+        int b1 = b0^a0;
+        int b2 = b3^a1;
+
+        return (b0 << 24)  + (b1 << 16) + (b2 << 8) + b3;
+    }
+
+    static int calculateConstInnerBytesk0(int wordIndex, int key) {
         // Split pairs
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
@@ -88,42 +79,21 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S5,13,S21(L0⊕R0⊕L4)
-        int a1 = getBit2(L0, 5)^getBit2(L0, 13)^getBit2(L0, 21)
-                ^getBit2(R0, 5)^getBit2(R0, 13)^getBit2(R0, 21)
-                ^getBit2(L4, 5)^getBit2(L4, 13)^getBit2(L4, 21);
+        int a1 = getBit(L0, 5)^getBit(L0, 13)^getBit(L0, 21)
+                ^getBit(R0, 5)^getBit(R0, 13)^getBit(R0, 21)
+                ^getBit(L4, 5)^getBit(L4, 13)^getBit(L4, 21);
 
         // S15(L0⊕L4⊕R4)
-        int a2 = getBit2(L0, 15)^getBit2(L4, 15)^getBit2(R4, 15);
+        int a2 = getBit(L0, 15)^getBit(L4, 15)^getBit(R4, 15);
 
         // S15(F(L0⊕R0⊕K˜0))
-        int a3 = getBit2(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key))), 15);
+        int a3 = getBit(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key))), 15);
 
         // a = a1⊕a2⊕a3
         return a1 ^ a2 ^ a3;
     }
 
-    private static int generate20BitKeyForOutterBytes(int k, int key_tilda) {
-        int a0 = (key_tilda >> 16) & 0xFF;
-        int a1 = (key_tilda >> 8) & 0xFF;
-
-        int b0 = (k >> 12) & 0xFF;
-        int b1 = 0;
-        int b2 = 0;
-        int b3 = (k >> 4) & 0xFF;
-
-        int bits_2_3 = ((k & 0xF) >> 2) << 6;
-        a0 = bits_2_3 + (a0);
-
-        int bits_0_1 = (k & 0x3) << 6;
-        a1 = bits_0_1 + a1;
-
-        b1 = b0^a0;
-        b2 = b3^a1;
-
-        return (b0 << 24)  + (b1 << 16) + (b2 << 8) + b3;
-    }
-
-    static int calculateConstOutteBytes(int wordIndex, int key) {
+    static int calculateConstOutteBytesk0(int wordIndex, int key) {
         // Split pairs
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
@@ -131,17 +101,17 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // a1 = S23,29(L0⊕R0⊕L4)
-        int a1 = getBit2(L0, 13)^getBit2(R0, 13)^getBit2(L4, 13);
+        int a1 = getBit(L0, 13)^getBit(R0, 13)^getBit(L4, 13);
 
         // a2 = S31(L0⊕L4⊕R4)
-        int a2 = getBit2(L0, 7)^getBit2(L0, 15)^getBit2(L0, 23)^getBit2(L0, 31)
-                ^getBit2(L4, 7)^getBit2(L4, 15)^getBit2(L4, 23)^getBit2(L4, 31)
-                ^getBit2(R4, 7)^getBit2(R4, 15)^getBit2(R4, 23)^getBit2(R4, 31);
+        int a2 = getBit(L0, 7)^getBit(L0, 15)^getBit(L0, 23)^getBit(L0, 31)
+                ^getBit(L4, 7)^getBit(L4, 15)^getBit(L4, 23)^getBit(L4, 31)
+                ^getBit(R4, 7)^getBit(R4, 15)^getBit(R4, 23)^getBit(R4, 31);
 
         // a3 = S31(F(L0⊕R0⊕K0))
         int a3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key)));
 
-        a3 = getBit2(a3, 7)^getBit2(a3, 15)^getBit2(a3, 23)^getBit2(a3, 31);
+        a3 = getBit(a3, 7)^getBit(a3, 15)^getBit(a3, 23)^getBit(a3, 31);
 
         // a = a1⊕a2⊕a3
         return a1^a2^a3;
@@ -155,13 +125,13 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S5,13,21(L0 ⊕ R4)
-        int a1 = getBit2(L0, 5)^getBit2(R4, 5)^getBit2(L4, 5)
-                ^getBit2(L0, 13)^getBit2(R4, 13)^getBit2(L4, 13)
-                ^getBit2(L0, 21)^getBit2(R4, 21)^getBit2(L4, 21);
+        int a1 = getBit(L0, 5)^getBit(R4, 5)^getBit(L4, 5)
+                ^getBit(L0, 13)^getBit(R4, 13)^getBit(L4, 13)
+                ^getBit(L0, 21)^getBit(R4, 21)^getBit(L4, 21);
 
         // S15 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
         int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int a2 = getBit2(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key))), 15);
+        int a2 = getBit(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key))), 15);
 
         // a = a1⊕a2
         return a1 ^ a2;
@@ -175,15 +145,15 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S13(L0 ⊕ R4)
-        int a1 = getBit2(L0, 13)^getBit2(R4, 13)^getBit2(L4, 13);
+        int a1 = getBit(L0, 13)^getBit(R4, 13)^getBit(L4, 13);
 
         // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
         int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
         int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key)));
-        int a2 = getBit2(y1, 7)
-                ^getBit2(y1, 15)
-                ^getBit2(y1, 23)
-                ^getBit2(y1, 31);
+        int a2 = getBit(y1, 7)
+                ^getBit(y1, 15)
+                ^getBit(y1, 23)
+                ^getBit(y1, 31);
 
         // a = a1⊕a2
         return a1^a2;
@@ -197,14 +167,14 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S5,13,21(L0 ⊕ R4)
-        int a1 = getBit2(L0, 5)^getBit2(R0, 5)^getBit2(L4, 5)
-                ^getBit2(L0, 13)^getBit2(R0, 13)^getBit2(L4, 13)
-                ^getBit2(L0, 21)^getBit2(R0, 21)^getBit2(L4, 21);
+        int a1 = getBit(L0, 5)^getBit(R0, 5)^getBit(L4, 5)
+                ^getBit(L0, 13)^getBit(R0, 13)^getBit(L4, 13)
+                ^getBit(L0, 21)^getBit(R0, 21)^getBit(L4, 21);
 
         // S15 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
         int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
         int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int a2 = getBit2(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key))), 15);
+        int a2 = getBit(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key))), 15);
 
         // a = a1⊕a2
         return a1 ^ a2;
@@ -218,16 +188,16 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S13(L0 ⊕ R4)
-        int a1 = getBit2(L0, 13)^getBit2(R0, 13)^getBit2(L4, 13);
+        int a1 = getBit(L0, 13)^getBit(R0, 13)^getBit(L4, 13);
 
         // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
         int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
         int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
         int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key)));
-        int a2 = getBit2(y2, 7)
-                ^getBit2(y2, 15)
-                ^getBit2(y2, 23)
-                ^getBit2(y2, 31);
+        int a2 = getBit(y2, 7)
+                ^getBit(y2, 15)
+                ^getBit(y2, 23)
+                ^getBit(y2, 31);
 
         // a = a1⊕a2
         return a1^a2;
@@ -241,19 +211,19 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S13(L0 ⊕ R4)
-        int a1 = getBit2(L0, 5)^getBit2(L4, 5)^getBit2(R4, 5)
-                ^getBit2(L0, 13)^getBit2(L4, 13)^getBit2(R4, 13)
-                ^getBit2(L0, 21)^getBit2(L4, 21)^getBit2(R4, 21);
+        int a1 = getBit(L0, 5)^getBit(L4, 5)^getBit(R4, 5)
+                ^getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13)
+                ^getBit(L0, 21)^getBit(L4, 21)^getBit(R4, 21);
 
         // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
-        int a2 = getBit2(L0, 15)^getBit2(R0, 15)^getBit2(L4, 15);
+        int a2 = getBit(L0, 15)^getBit(R0, 15)^getBit(L4, 15);
 
 
         int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
         int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
         int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^k2)));
         int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key)));
-        int a3 = getBit2(y3, 15);
+        int a3 = getBit(y3, 15);
 
         // a = a1⊕a2
         return a1^a2^a3;
@@ -267,23 +237,105 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S13(L0 ⊕ R4)
-        int a1 = getBit2(L0, 13)^getBit2(L4, 13)^getBit2(R4, 13);
+        int a1 = getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13);
 
         // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
-        int a2 = getBit2(L0, 7)^getBit2(R0, 7)^getBit2(L4, 7)
-                ^getBit2(L0, 15)^getBit2(R0, 15)^getBit2(L4, 15)
-                ^getBit2(L0, 23)^getBit2(R0, 23)^getBit2(L4, 23)
-                ^getBit2(L0, 31)^getBit2(R0, 31)^getBit2(L4, 31);
+        int a2 = getBit(L0, 7)^getBit(R0, 7)^getBit(L4, 7)
+                ^getBit(L0, 15)^getBit(R0, 15)^getBit(L4, 15)
+                ^getBit(L0, 23)^getBit(R0, 23)^getBit(L4, 23)
+                ^getBit(L0, 31)^getBit(R0, 31)^getBit(L4, 31);
 
 
         int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
         int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
         int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^k2)));
         int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key)));
-        int a3 = getBit2(y3, 7)^getBit2(y3, 15)^getBit2(y3, 23)^getBit2(y3, 31);
+        int a3 = getBit(y3, 7)^getBit(y3, 15)^getBit(y3, 23)^getBit(y3, 31);
 
         // a = a1⊕a2
         return a1^a2^a3;
+    }
+
+    private static void attackK1(int key0) {
+        for(int k1=0; k1<4096; k1++) {
+            int key_tilda = generate12BitKeyForInnerBytes(k1);
+            int first_a1 = calculateConstInnerBytesk1(0, key_tilda, key0);
+
+            for(int w1=1; w1<num_pairs; w1++) {
+                if(first_a1 != calculateConstInnerBytesk1(w1, key_tilda,  key0))
+                    break;
+
+                if(w1 == num_pairs-1) {
+                    for(int k2=0; k2<1048576; k2++) {
+                        int key1 = generate20BitKeyForOutterBytes(k2, key_tilda);
+                        int first_a2 = calculateConstOutteBytesk1(0, key1, key0);
+
+                        for(int w2=1; w2<num_pairs; w2++) {
+                            if(first_a2 != calculateConstOutteBytesk1(w2, key1, key0))
+                                break;
+
+                            if(w2 == num_pairs-1)
+                                attackK2(key0, key1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static void attackK2(int key0, int key1) {
+        for(int k1=0; k1<4096; k1++) {
+            int key_tilda = generate12BitKeyForInnerBytes(k1);
+            int first_a1 = calculateConstInnerBytesk2(0, key_tilda, key0, key1);
+
+            for(int w1=1; w1<num_pairs; w1++) {
+                if(first_a1 != calculateConstInnerBytesk2(w1, key_tilda,  key0, key1))
+                    break;
+
+                if(w1 == num_pairs-1) {
+                    for(int k2=0; k2<1048576; k2++) {
+                        int key2 = generate20BitKeyForOutterBytes(k2, key_tilda);
+                        int first_a2 = calculateConstOutteBytesk2(0, key2, key0, key1);
+
+                        for(int w2=1; w2<num_pairs; w2++) {
+                            if(first_a2 != calculateConstOutteBytesk2(w2, key2, key0, key1))
+                                break;
+
+                            if(w2 == num_pairs-1)
+                                attackK3(key0, key1, key2);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private static void attackK3(int key0, int key1, int key2) {
+        for(int k1=0; k1<4096; k1++) {
+            int key_tilda = generate12BitKeyForInnerBytes(k1);
+            int first_a1 = calculateConstInnerBytesk3(0, key_tilda, key0, key1, key2);
+
+            for(int w1=1; w1<num_pairs; w1++) {
+                if(first_a1 != calculateConstInnerBytesk3(w1, key_tilda,  key0, key1, key2))
+                    break;
+
+                if(w1 == num_pairs-1) {
+                    for(int k2=0; k2<1048576; k2++) {
+                        int key3 = generate20BitKeyForOutterBytes(k2, key_tilda);
+                        int first_a2 = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
+
+                        for(int w2=1; w2<num_pairs; w2++) {
+                            if(first_a2 != calculateConstOutteBytesk3(w2, key3, key0, key1, key2))
+                                break;
+
+                            if(w2 == num_pairs-1)
+                                testKeys(key0, key1, key2, key3);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private static void testKeys(int key0, int key1, int key2, int key3) {
@@ -300,10 +352,7 @@ public class MyFealLinear {
         int left = L0^R0^y1^y3;
 
         int key4 = left^L4;
-        // System.out.println(getBitString(Integer.reverseBytes(key4)));
-
         int key5 = left^L0^y0^y2^R4;
-        // System.out.println(getBitString(Integer.reverseBytes(key5)));
 
         key0 = Integer.reverseBytes(key0);
         key1 = Integer.reverseBytes(key1);
@@ -315,7 +364,7 @@ public class MyFealLinear {
         byte[] data = new byte[8];
         int key[] = {key0, key1, key2, key3, key4, key5};
 
-        for(int w=0; w<text_count; w++) {
+        for(int w=0; w<num_pairs; w++) {
             String p_word = plaintext[w];
             String c_word = cyphertext[w];
 
@@ -342,143 +391,36 @@ public class MyFealLinear {
 
     }
 
-    private static void attackK3(int key0, int key1, int key2) {
-
-        Set<Integer> candidateKeysk3 = new HashSet<Integer>();
-
-        for(int k1=0; k1<4096; k1++) {
-            int key_tilda = generate12BitKeyForInnerBytes(k1);
-            int first_a1 = calculateConstInnerBytesk3(0, key_tilda, key0, key1, key2);
-
-            for(int w1=1; w1<text_count; w1++) {
-                if(first_a1 != calculateConstInnerBytesk3(w1, key_tilda,  key0, key1, key2))
-                    break;
-
-                if(w1 == text_count-1) {
-                    // System.out.println(getBitString(key_tilda));
-
-                    for(int k2=0; k2<1048576; k2++) {
-                        int key3 = generate20BitKeyForOutterBytes(k2, key_tilda);
-                        int first_a2 = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
-
-                        for(int w2=1; w2<text_count; w2++) {
-                            if(first_a2 != calculateConstOutteBytesk3(w2, key3, key0, key1, key2))
-                                break;
-
-                            if(w2 == text_count-1) {
-                                // System.out.println(getBitString(Integer.reverseBytes(key3)));
-                                candidateKeysk3.add(key3);
-                                testKeys(key0, key1, key2, key3);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static void attackK2(int key0, int key1) {
-
-        Set<Integer> candidateKeysk2 = new HashSet<Integer>();
-
-        for(int k1=0; k1<4096; k1++) {
-            int key_tilda = generate12BitKeyForInnerBytes(k1);
-            int first_a1 = calculateConstInnerBytesk2(0, key_tilda, key0, key1);
-
-            for(int w1=1; w1<text_count; w1++) {
-                if(first_a1 != calculateConstInnerBytesk2(w1, key_tilda,  key0, key1))
-                    break;
-
-                if(w1 == text_count-1) {
-                    // System.out.println(getBitString(key_tilda));
-
-                    for(int k2=0; k2<1048576; k2++) {
-                        int key2 = generate20BitKeyForOutterBytes(k2, key_tilda);
-                        int first_a2 = calculateConstOutteBytesk2(0, key2, key0, key1);
-
-                        for(int w2=1; w2<text_count; w2++) {
-                            if(first_a2 != calculateConstOutteBytesk2(w2, key2, key0, key1))
-                                break;
-
-                            if(w2 == text_count-1) {
-                                // System.out.println(getBitString(Integer.reverseBytes(key2)));
-                                candidateKeysk2.add(key2);
-                                attackK3(key0, key1, key2);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static void attackK1(int key0) {
-
-        Set<Integer> candidateKeysk1 = new HashSet<Integer>();
-
-        for(int k1=0; k1<4096; k1++) {
-            int key_tilda = generate12BitKeyForInnerBytes(k1);
-            int first_a1 = calculateConstInnerBytesk1(0, key_tilda, key0);
-
-            for(int w1=1; w1<text_count; w1++) {
-                if(first_a1 != calculateConstInnerBytesk1(w1, key_tilda,  key0))
-                    break;
-
-                if(w1 == text_count-1) {
-                    // System.out.println(getBitString(key_tilda));
-
-                    for(int k2=0; k2<1048576; k2++) {
-                        int key1 = generate20BitKeyForOutterBytes(k2, key_tilda);
-                        int first_a2 = calculateConstOutteBytesk1(0, key1, key0);
-
-                        for(int w2=1; w2<text_count; w2++) {
-                            if(first_a2 != calculateConstOutteBytesk1(w2, key1, key0))
-                                break;
-
-                            if(w2 == text_count-1) {
-                                // System.out.println(getBitString(Integer.reverseBytes(key1)));
-                                attackK2(key0, key1);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     public static void main(String [] args) {
         readKnownTextPairs();
 
-        System.out.println("Linear Analysis of Feal 4");
+        System.out.println("Start Linear Analysis of Feal 4");
 
         for(int k1=0; k1<4096; k1++) {
             int key_tilda = generate12BitKeyForInnerBytes(k1);
-            int first_a1 = calculateConstInnerBytes(0, key_tilda);
+            int first_a1 = calculateConstInnerBytesk0(0, key_tilda);
 
-            // 200 equals number of pairs
-            for(int w1=1; w1<text_count; w1++) {
-                if(first_a1 != calculateConstInnerBytes(w1, key_tilda))
+            for(int w1=1; w1<num_pairs; w1++) {
+                if(first_a1 != calculateConstInnerBytesk0(w1, key_tilda))
                     break;
 
-                if(w1 == text_count-1) {
-                    // System.out.println(getBitString(key_tilda));
-
+                if(w1 == num_pairs-1) {
                     for(int k2=0; k2<1048576; k2++) {
                         int key0 = generate20BitKeyForOutterBytes(k2, key_tilda);
-                        int first_a2 = calculateConstOutteBytes(0, key0);
+                        int first_a2 = calculateConstOutteBytesk0(0, key0);
 
-                        for(int w2=1; w2<text_count; w2++) {
-                            if(first_a2 != calculateConstOutteBytes(w2, key0))
+                        for(int w2=1; w2<num_pairs; w2++) {
+                            if(first_a2 != calculateConstOutteBytesk0(w2, key0))
                                 break;
 
-                            if(w2 == text_count-1) {
-                                // System.out.println(getBitString(Integer.reverseBytes(key0)));
+                            if(w2 == num_pairs-1)
                                 attackK1(key0);
-                            }
                         }
                     }
                 }
             }
         }
+
+        System.out.println("Finish Linear Analysis of Feal 4");
     }
 }
