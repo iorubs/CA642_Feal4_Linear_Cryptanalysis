@@ -21,10 +21,8 @@ public class MyFealLinear {
     private static void readKnownTextPairs() {
         try {
             BufferedReader bufferedReader = new BufferedReader(new FileReader("known_geoff.txt"));
-
             int count = 0;
             boolean isPlainText = true;
-
             String line = bufferedReader.readLine();
 
             while(line != null && count < plaintext.length) {
@@ -45,12 +43,8 @@ public class MyFealLinear {
 
             bufferedReader.close();
         }
-        catch(FileNotFoundException e) {
-            System.out.println("Could not find input file.");
-        }
-        catch(IOException e) {
-            System.out.println("Unable to read input file: IOException");
-        }
+        catch(FileNotFoundException e) { System.out.println("Could not find input file."); }
+        catch(IOException e) { System.out.println("Unable to read input file: IOException"); }
     }
 
     private static int generate12BitKeyForInnerBytes(int k) {
@@ -87,10 +81,10 @@ public class MyFealLinear {
         int a2 = getBit(L0, 15)^getBit(L4, 15)^getBit(R4, 15);
 
         // S15(F(L0⊕R0⊕K˜0))
-        int a3 = getBit(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key))), 15);
+        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key)));
+        int a3 = getBit(y0, 15);
 
-        // a = a1⊕a2⊕a3
-        return a1 ^ a2 ^ a3;
+        return a1^a2^a3;
     }
 
     static int calculateConstOutteBytesk0(int wordIndex, int key) {
@@ -109,11 +103,10 @@ public class MyFealLinear {
                 ^getBit(R4, 7)^getBit(R4, 15)^getBit(R4, 23)^getBit(R4, 31);
 
         // a3 = S31(F(L0⊕R0⊕K0))
-        int a3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key)));
+        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key)));
 
-        a3 = getBit(a3, 7)^getBit(a3, 15)^getBit(a3, 23)^getBit(a3, 31);
+        int a3 = getBit(y0, 7)^getBit(y0, 15)^getBit(y0, 23)^getBit(y0, 31);
 
-        // a = a1⊕a2⊕a3
         return a1^a2^a3;
     }
 
@@ -124,17 +117,16 @@ public class MyFealLinear {
         int L4 = getLeft(cyphertext[wordIndex]);
         int R4 = getRigth(cyphertext[wordIndex]);
 
-        // S5,13,21(L0 ⊕ R4)
-        int a1 = getBit(L0, 5)^getBit(R4, 5)^getBit(L4, 5)
-                ^getBit(L0, 13)^getBit(R4, 13)^getBit(L4, 13)
-                ^getBit(L0, 21)^getBit(R4, 21)^getBit(L4, 21);
+        // S5,13,21(L0 ⊕ L4 ⊕ R4)
+        int a1 = getBit(L0, 5)^getBit(L4, 5)^getBit(R4, 5)
+                ^getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13)
+                ^getBit(L0, 21)^getBit(L4, 21)^getBit(R4, 21);
 
         // S15 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
         int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
         int a2 = getBit(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key))), 15);
 
-        // a = a1⊕a2
-        return a1 ^ a2;
+        return a1^a2;
     }
 
     static int calculateConstOutteBytesk1(int wordIndex, int key, int k0) {
@@ -144,116 +136,16 @@ public class MyFealLinear {
         int L4 = getLeft(cyphertext[wordIndex]);
         int R4 = getRigth(cyphertext[wordIndex]);
 
-        // S13(L0 ⊕ R4)
-        int a1 = getBit(L0, 13)^getBit(R4, 13)^getBit(L4, 13);
+        // S13(L0 ⊕ L4 ⊕ R4)
+        int a1 = getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13);
 
         // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
         int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
         int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key)));
-        int a2 = getBit(y1, 7)
-                ^getBit(y1, 15)
-                ^getBit(y1, 23)
-                ^getBit(y1, 31);
 
-        // a = a1⊕a2
+        int a2 = getBit(y1, 7)^getBit(y1, 15)^getBit(y1, 23)^getBit(y1, 31);
+
         return a1^a2;
-    }
-
-    static int calculateConstInnerBytesk2(int wordIndex, int key, int k0, int k1) {
-        // Split pairs
-        int L0 = getLeft(plaintext[wordIndex]);
-        int R0 = getRigth(plaintext[wordIndex]);
-        int L4 = getLeft(cyphertext[wordIndex]);
-        int R4 = getRigth(cyphertext[wordIndex]);
-
-        // S5,13,21(L0 ⊕ R4)
-        int a1 = getBit(L0, 5)^getBit(R0, 5)^getBit(L4, 5)
-                ^getBit(L0, 13)^getBit(R0, 13)^getBit(L4, 13)
-                ^getBit(L0, 21)^getBit(R0, 21)^getBit(L4, 21);
-
-        // S15 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int a2 = getBit(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key))), 15);
-
-        // a = a1⊕a2
-        return a1 ^ a2;
-    }
-
-    static int calculateConstOutteBytesk2(int wordIndex, int key, int k0, int k1) {
-        // Split pairs
-        int L0 = getLeft(plaintext[wordIndex]);
-        int R0 = getRigth(plaintext[wordIndex]);
-        int L4 = getLeft(cyphertext[wordIndex]);
-        int R4 = getRigth(cyphertext[wordIndex]);
-
-        // S13(L0 ⊕ R4)
-        int a1 = getBit(L0, 13)^getBit(R0, 13)^getBit(L4, 13);
-
-        // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key)));
-        int a2 = getBit(y2, 7)
-                ^getBit(y2, 15)
-                ^getBit(y2, 23)
-                ^getBit(y2, 31);
-
-        // a = a1⊕a2
-        return a1^a2;
-    }
-
-    static int calculateConstInnerBytesk3(int wordIndex, int key, int k0, int k1, int k2) {
-        // Split pairs
-        int L0 = getLeft(plaintext[wordIndex]);
-        int R0 = getRigth(plaintext[wordIndex]);
-        int L4 = getLeft(cyphertext[wordIndex]);
-        int R4 = getRigth(cyphertext[wordIndex]);
-
-        // S13(L0 ⊕ R4)
-        int a1 = getBit(L0, 5)^getBit(L4, 5)^getBit(R4, 5)
-                ^getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13)
-                ^getBit(L0, 21)^getBit(L4, 21)^getBit(R4, 21);
-
-        // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
-        int a2 = getBit(L0, 15)^getBit(R0, 15)^getBit(L4, 15);
-
-
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^k2)));
-        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key)));
-        int a3 = getBit(y3, 15);
-
-        // a = a1⊕a2
-        return a1^a2^a3;
-    }
-
-    static int calculateConstOutteBytesk3(int wordIndex, int key, int k0, int k1, int k2) {
-        // Split pairs
-        int L0 = getLeft(plaintext[wordIndex]);
-        int R0 = getRigth(plaintext[wordIndex]);
-        int L4 = getLeft(cyphertext[wordIndex]);
-        int R4 = getRigth(cyphertext[wordIndex]);
-
-        // S13(L0 ⊕ R4)
-        int a1 = getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13);
-
-        // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
-        int a2 = getBit(L0, 7)^getBit(R0, 7)^getBit(L4, 7)
-                ^getBit(L0, 15)^getBit(R0, 15)^getBit(L4, 15)
-                ^getBit(L0, 23)^getBit(R0, 23)^getBit(L4, 23)
-                ^getBit(L0, 31)^getBit(R0, 31)^getBit(L4, 31);
-
-
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^k2)));
-        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key)));
-        int a3 = getBit(y3, 7)^getBit(y3, 15)^getBit(y3, 23)^getBit(y3, 31);
-
-        // a = a1⊕a2
-        return a1^a2^a3;
     }
 
     private static void attackK1(int key0) {
@@ -283,6 +175,47 @@ public class MyFealLinear {
         }
     }
 
+    static int calculateConstInnerBytesk2(int wordIndex, int key, int k0, int k1) {
+        // Split pairs
+        int L0 = getLeft(plaintext[wordIndex]);
+        int R0 = getRigth(plaintext[wordIndex]);
+        int L4 = getLeft(cyphertext[wordIndex]);
+        int R4 = getRigth(cyphertext[wordIndex]);
+
+        // S5,13,21(L0 ⊕ L4 ⊕ R4)
+        int a1 = getBit(L0, 5)^getBit(R0, 5)^getBit(L4, 5)
+                ^getBit(L0, 13)^getBit(R0, 13)^getBit(L4, 13)
+                ^getBit(L0, 21)^getBit(R0, 21)^getBit(L4, 21);
+
+        // S15 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
+        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
+        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
+        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key)));
+        int a2 = getBit(y2, 15);
+
+        return a1^a2;
+    }
+
+    static int calculateConstOutteBytesk2(int wordIndex, int key, int k0, int k1) {
+        // Split pairs
+        int L0 = getLeft(plaintext[wordIndex]);
+        int R0 = getRigth(plaintext[wordIndex]);
+        int L4 = getLeft(cyphertext[wordIndex]);
+        int R4 = getRigth(cyphertext[wordIndex]);
+
+        // S13(L0 ⊕ R4)
+        int a1 = getBit(L0, 13)^getBit(R0, 13)^getBit(L4, 13);
+
+        // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
+        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
+        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
+        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key)));
+
+        int a2 = getBit(y2, 7)^getBit(y2, 15)^getBit(y2, 23)^getBit(y2, 31);
+
+        return a1^a2;
+    }
+
     private static void attackK2(int key0, int key1) {
         for(int k1=0; k1<4096; k1++) {
             int key_tilda = generate12BitKeyForInnerBytes(k1);
@@ -308,6 +241,58 @@ public class MyFealLinear {
                 }
             }
         }
+    }
+
+    static int calculateConstInnerBytesk3(int wordIndex, int key, int k0, int k1, int k2) {
+        // Split pairs
+        int L0 = getLeft(plaintext[wordIndex]);
+        int R0 = getRigth(plaintext[wordIndex]);
+        int L4 = getLeft(cyphertext[wordIndex]);
+        int R4 = getRigth(cyphertext[wordIndex]);
+
+        // S13(L0 ⊕ R4)
+        int a1 = getBit(L0, 5)^getBit(L4, 5)^getBit(R4, 5)
+                ^getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13)
+                ^getBit(L0, 21)^getBit(L4, 21)^getBit(R4, 21);
+
+        // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
+        int a2 = getBit(L0, 15)^getBit(R0, 15)^getBit(L4, 15);
+
+
+        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
+        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
+        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^k2)));
+        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key)));
+        int a3 = getBit(y3, 15);
+
+        return a1^a2^a3;
+    }
+
+    static int calculateConstOutteBytesk3(int wordIndex, int key, int k0, int k1, int k2) {
+        // Split pairs
+        int L0 = getLeft(plaintext[wordIndex]);
+        int R0 = getRigth(plaintext[wordIndex]);
+        int L4 = getLeft(cyphertext[wordIndex]);
+        int R4 = getRigth(cyphertext[wordIndex]);
+
+        // S13(L0 ⊕ R4)
+        int a1 = getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13);
+
+        // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
+        int a2 = getBit(L0, 7)^getBit(R0, 7)^getBit(L4, 7)
+                ^getBit(L0, 15)^getBit(R0, 15)^getBit(L4, 15)
+                ^getBit(L0, 23)^getBit(R0, 23)^getBit(L4, 23)
+                ^getBit(L0, 31)^getBit(R0, 31)^getBit(L4, 31);
+
+
+        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
+        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
+        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^k2)));
+        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key)));
+
+        int a3 = getBit(y3, 7)^getBit(y3, 15)^getBit(y3, 23)^getBit(y3, 31);
+
+        return a1^a2^a3;
     }
 
     private static void attackK3(int key0, int key1, int key2) {
@@ -357,8 +342,8 @@ public class MyFealLinear {
         int key4 = Integer.reverseBytes(left^L4);
         int key5 = Integer.reverseBytes(left^L0^y0^y2^R4);
 
-        byte[] data = new byte[8];
         int key[] = {key0, key1, key2, key3, key4, key5};
+        byte[] data = new byte[8];
 
         for(int w=0; w<num_pairs; w++) {
             String p_word = plaintext[w];
