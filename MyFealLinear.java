@@ -1,7 +1,6 @@
 import java.io.*;
 
 public class MyFealLinear {
-
     static int num_pairs = 200;
     static String plaintext[] = new String[num_pairs];
     static String cyphertext[] = new String[num_pairs];
@@ -16,6 +15,10 @@ public class MyFealLinear {
 
     private static int getRigth(String word_64) {
         return (int) Long.parseLong(word_64.substring(8), 16);
+    }
+
+    private static int f(int num) {
+        return Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(num)));
     }
 
     private static void readKnownTextPairs() {
@@ -73,15 +76,13 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S5,13,S21(L0⊕R0⊕L4)
-        int L0_R0_L4 = L0^R0^L4;
-        int a1 = getBit(L0_R0_L4, 5)^getBit(L0_R0_L4, 13)^getBit(L0_R0_L4, 21);
+        int a1 = getBit(L0^R0^L4, 5)^getBit(L0^R0^L4, 13)^getBit(L0^R0^L4, 21);
 
         // S15(L0⊕L4⊕R4)
-        int a2 = getBit(L0, 15)^getBit(L4, 15)^getBit(R4, 15);
+        int a2 = getBit(L0^L4^R4, 15);
 
         // S15(F(L0⊕R0⊕K˜0))
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key)));
-        int a3 = getBit(y0, 15);
+        int a3 = getBit(f(L0^R0^key), 15);
 
         return a1^a2^a3;
     }
@@ -94,15 +95,13 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // a1 = S23,29(L0⊕R0⊕L4)
-        int a1 = getBit(L0, 13)^getBit(R0, 13)^getBit(L4, 13);
+        int a1 = getBit(L0^R0^L4, 13);
 
         // a2 = S31(L0⊕L4⊕R4)
-        int L0_L4_R4 = L0^L4^R4;
-        int a2 = getBit(L0_L4_R4, 7)^getBit(L0_L4_R4, 15)^getBit(L0_L4_R4, 23)^getBit(L0_L4_R4, 31);
+        int a2 = getBit(L0^L4^R4, 7)^getBit(L0^L4^R4, 15)^getBit(L0^L4^R4, 23)^getBit(L0^L4^R4, 31);
 
         // a3 = S31(F(L0⊕R0⊕K0))
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key)));
-
+        int y0 = f(L0^R0^key);
         int a3 = getBit(y0, 7)^getBit(y0, 15)^getBit(y0, 23)^getBit(y0, 31);
 
         return a1^a2^a3;
@@ -116,12 +115,11 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S5,13,21(L0 ⊕ L4 ⊕ R4)
-        int L0_L4_R4 = L0^L4^R4;
-        int a1 = getBit(L0_L4_R4, 5)^getBit(L0_L4_R4, 13)^getBit(L0_L4_R4, 21);
+        int a1 = getBit(L0^L4^R4, 5)^getBit(L0^L4^R4, 13)^getBit(L0^L4^R4, 21);
 
         // S15 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int a2 = getBit(Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key))), 15);
+        int y0 = f(L0^R0^k0);
+        int a2 = getBit(f(L0^y0^key), 15);
 
         return a1^a2;
     }
@@ -134,12 +132,11 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S13(L0 ⊕ L4 ⊕ R4)
-        int a1 = getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13);
+        int a1 = getBit(L0^L4^R4, 13);
 
         // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key)));
-
+        int y0 = f(L0^R0^k0);
+        int y1 = f(L0^y0^key);
         int a2 = getBit(y1, 7)^getBit(y1, 15)^getBit(y1, 23)^getBit(y1, 31);
 
         return a1^a2;
@@ -163,8 +160,9 @@ public class MyFealLinear {
                             if(first_a2 != calculateConstOutteBytesk1(w2, key1, key0))
                                 break;
 
-                            if(w2 == num_pairs-1)
+                            if(w2 == num_pairs-1) {
                                 attackK2(key0, key1);
+                            }
                         }
                     }
                 }
@@ -180,14 +178,12 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // S5,13,21(L0 ⊕ R0⊕ L4)
-        int L0_R0_L4 = L0^R0^L4;
-        int a1 = getBit(L0_R0_L4, 5)^getBit(L0_R0_L4, 13)^getBit(L0_R0_L4, 21);
+        int a1 = getBit(L0^R0^L4, 5)^getBit(L0^R0^L4, 13)^getBit(L0^R0^L4, 21);
 
         // S15 F(L0 ⊕ R0 ⊕ F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1) ⊕ K2)
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key)));
-        int a2 = getBit(y2, 15);
+        int y0 = f(L0^R0^k0);
+        int y1 = f(L0^y0^k1);
+        int a2 = getBit(f(L0^R0^y1^key), 15);
 
         return a1^a2;
     }
@@ -203,10 +199,9 @@ public class MyFealLinear {
         int a1 = getBit(L0^R0^L4, 13);
 
         // S7,15,23,31 F(L0 ⊕ R0 ⊕ F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1) ⊕ K2)
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key)));
-
+        int y0 = f(L0^R0^k0);
+        int y1 = f(L0^y0^k1);
+        int y2 = f(L0^R0^y1^key);
         int a2 = getBit(y2, 7)^getBit(y2, 15)^getBit(y2, 23)^getBit(y2, 31);
 
         return a1^a2;
@@ -247,18 +242,16 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // a1 = S5,13,21(L0 ⊕ L4 ⊕ R4)
-        int L0_L4_R4 = L0^L4^R4;
-        int a1 = getBit(L0_L4_R4, 5)^getBit(L0_L4_R4, 13)^getBit(L0_L4_R4, 21);
+        int a1 = getBit(L0^L4^R4, 5)^getBit(L0^L4^R4, 13)^getBit(L0^L4^R4, 21);
 
         // a2 = S15(L0 ⊕ R0 ⊕ L4)
-        int a2 = getBit(L0, 15)^getBit(R0, 15)^getBit(L4, 15);
+        int a2 = getBit(L0^R0^L4, 15);
 
         // a3 = S15 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ F(L0 ⊕ R0 ⊕ F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1) ⊕ K2) ⊕ K3)
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^k2)));
-        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key)));
-        int a3 = getBit(y3, 15);
+        int y0 = f(L0^R0^k0);
+        int y1 = f(L0^y0^k1);
+        int y2 = f(L0^R0^y1^k2);
+        int a3 = getBit(f(L0^y0^y2^key), 15);
 
         return a1^a2^a3;
     }
@@ -271,20 +264,16 @@ public class MyFealLinear {
         int R4 = getRigth(cyphertext[wordIndex]);
 
         // = S13(L0 ⊕ L4 ⊕ R4)
-        int a1 = getBit(L0, 13)^getBit(L4, 13)^getBit(R4, 13);
+        int a1 = getBit(L0^L4^R4, 13);
 
         // S7,15,23,31(L0 ⊕ R0 ⊕ L4)
-        int a2 = getBit(L0, 7)^getBit(R0, 7)^getBit(L4, 7)
-                ^getBit(L0, 15)^getBit(R0, 15)^getBit(L4, 15)
-                ^getBit(L0, 23)^getBit(R0, 23)^getBit(L4, 23)
-                ^getBit(L0, 31)^getBit(R0, 31)^getBit(L4, 31);
+        int a2 = getBit(L0^R0^L4, 7)^getBit(L0^R0^L4, 15)^getBit(L0^R0^L4, 23)^getBit(L0^R0^L4, 31);
 
         // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ F(L0 ⊕ R0 ⊕ F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1) ⊕ K2) ⊕ K3)
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^k0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^k1)));
-        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^k2)));
-        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key)));
-
+        int y0 = f(L0^R0^k0);
+        int y1 = f(L0^y0^k1);
+        int y2 = f(L0^R0^y1^k2);
+        int y3 = f(L0^y0^y2^key);
         int a3 = getBit(y3, 7)^getBit(y3, 15)^getBit(y3, 23)^getBit(y3, 31);
 
         return a1^a2^a3;
@@ -323,10 +312,10 @@ public class MyFealLinear {
         int L4 = getLeft(cyphertext[0]);
         int R4 = getRigth(cyphertext[0]);
 
-        int y0 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^key0)));
-        int y1 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^key1)));
-        int y2 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^R0^y1^key2)));
-        int y3 = Integer.reverseBytes(FEALLinear.f(Integer.reverseBytes(L0^y0^y2^key3)));
+        int y0 = f(L0^R0^key0);
+        int y1 = f(L0^y0^key1);
+        int y2 = f(L0^R0^y1^key2);
+        int y3 = f(L0^y0^y2^key3);
 
         key0 = Integer.reverseBytes(key0);
         key1 = Integer.reverseBytes(key1);
