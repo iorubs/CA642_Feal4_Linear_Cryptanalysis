@@ -329,15 +329,15 @@ public class MyFealLinear {
 
         for(int w=0; w<num_pairs; w++) {
             for (int i=0;i<8;i++)
-                data[i] = (byte)(Integer.parseInt(plaintext[w].substring(i * 2, (i * 2) + 2),16)&255);
+                data[i] = (byte)(Integer.parseInt(cyphertext[w].substring(i * 2, (i * 2) + 2),16)&255);
 
-            FEALLinear.encrypt(data, key);
+            FEALLinear.decrypt(data, key);
 
             StringBuilder sb = new StringBuilder(data.length * 2);
             for(byte b: data)
                 sb.append(String.format("%02x", b));
 
-            if(!cyphertext[w].equals(sb.toString()))
+            if(!plaintext[w].equals(sb.toString()))
                 return;
         }
 
