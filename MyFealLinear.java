@@ -37,13 +37,10 @@ public class MyFealLinear {
                         cyphertext[count] = line.substring(12);
                         count++;
                     }
-
                     isPlainText = !isPlainText;
                 }
-
                 line = bufferedReader.readLine();
             }
-
             bufferedReader.close();
         }
         catch(FileNotFoundException e) { System.out.println("Could not find input file."); }
@@ -51,7 +48,6 @@ public class MyFealLinear {
     }
 
     private static int generate12BitKeyForInnerBytes(int k) {
-        // K~ = Keep 10-15, 18-23 and zero's for 0-9, 24-31, 16-17.
         return (((k >> 6) & 0x3F) << 16) + ((k & 0x3F) << 8) ;
     }
 
@@ -69,38 +65,36 @@ public class MyFealLinear {
     }
 
     static int calculateConstInnerBytesk0(int wordIndex, int key) {
-        // Split pairs
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
         int L4 = getLeft(cyphertext[wordIndex]);
         int R4 = getRigth(cyphertext[wordIndex]);
 
-        // S5,13,S21(L0⊕R0⊕L4)
+        // S5,13,21(L0 ⊕ R0 ⊕ L4)
         int a1 = getBit(L0^R0^L4, 5)^getBit(L0^R0^L4, 13)^getBit(L0^R0^L4, 21);
 
-        // S15(L0⊕L4⊕R4)
+        // S15(L0 ⊕ L4 ⊕ R4)
         int a2 = getBit(L0^L4^R4, 15);
 
-        // S15(F(L0⊕R0⊕K˜0))
+        // S15 F(L0 ⊕ R0 ⊕ K0)
         int a3 = getBit(f(L0^R0^key), 15);
 
         return a1^a2^a3;
     }
 
     static int calculateConstOutteBytesk0(int wordIndex, int key) {
-        // Split pairs
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
         int L4 = getLeft(cyphertext[wordIndex]);
         int R4 = getRigth(cyphertext[wordIndex]);
 
-        // a1 = S23,29(L0⊕R0⊕L4)
+        // S13(L0 ⊕ R0 ⊕ L4)
         int a1 = getBit(L0^R0^L4, 13);
 
-        // a2 = S31(L0⊕L4⊕R4)
+        // S7,15,23,31(L0 ⊕ L4 ⊕ R4)
         int a2 = getBit(L0^L4^R4, 7)^getBit(L0^L4^R4, 15)^getBit(L0^L4^R4, 23)^getBit(L0^L4^R4, 31);
 
-        // a3 = S31(F(L0⊕R0⊕K0))
+        // S7,15,23,31 F(L0 ⊕ R0 ⊕ K0)
         int y0 = f(L0^R0^key);
         int a3 = getBit(y0, 7)^getBit(y0, 15)^getBit(y0, 23)^getBit(y0, 31);
 
@@ -108,7 +102,6 @@ public class MyFealLinear {
     }
 
     static int calculateConstInnerBytesk1(int wordIndex, int key, int k0) {
-        // Split pairs
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
         int L4 = getLeft(cyphertext[wordIndex]);
@@ -124,8 +117,7 @@ public class MyFealLinear {
         return a1^a2;
     }
 
-    static int calculateConstOutteBytesk1(int wordIndex, int key, int k0) {
-        // Split pairs
+    static int calculateConstOutteBytesk1(int wordIndex, int k0, int k1) {
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
         int L4 = getLeft(cyphertext[wordIndex]);
@@ -136,7 +128,7 @@ public class MyFealLinear {
 
         // S7,15,23,31 F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1)
         int y0 = f(L0^R0^k0);
-        int y1 = f(L0^y0^key);
+        int y1 = f(L0^y0^k1);
         int a2 = getBit(y1, 7)^getBit(y1, 15)^getBit(y1, 23)^getBit(y1, 31);
 
         return a1^a2;
@@ -154,15 +146,14 @@ public class MyFealLinear {
                 if(w1 == num_pairs-1) {
                     for(int k2=0; k2<1048576; k2++) {
                         int key1 = generate20BitKeyForOutterBytes(k2, key_tilda);
-                        int first_a2 = calculateConstOutteBytesk1(0, key1, key0);
+                        int first_a2 = calculateConstOutteBytesk1(0, key0, key1);
 
                         for(int w2=1; w2<num_pairs; w2++) {
-                            if(first_a2 != calculateConstOutteBytesk1(w2, key1, key0))
+                            if(first_a2 != calculateConstOutteBytesk1(w2, key0, key1))
                                 break;
 
-                            if(w2 == num_pairs-1) {
+                            if(w2 == num_pairs-1)
                                 attackK2(key0, key1);
-                            }
                         }
                     }
                 }
@@ -171,7 +162,6 @@ public class MyFealLinear {
     }
 
     static int calculateConstInnerBytesk2(int wordIndex, int key, int k0, int k1) {
-        // Split pairs
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
         int L4 = getLeft(cyphertext[wordIndex]);
@@ -188,8 +178,7 @@ public class MyFealLinear {
         return a1^a2;
     }
 
-    static int calculateConstOutteBytesk2(int wordIndex, int key, int k0, int k1) {
-        // Split pairs
+    static int calculateConstOutteBytesk2(int wordIndex, int k0, int k1, int k2) {
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
         int L4 = getLeft(cyphertext[wordIndex]);
@@ -201,7 +190,7 @@ public class MyFealLinear {
         // S7,15,23,31 F(L0 ⊕ R0 ⊕ F(L0 ⊕ F(L0 ⊕ R0 ⊕ K0) ⊕ K1) ⊕ K2)
         int y0 = f(L0^R0^k0);
         int y1 = f(L0^y0^k1);
-        int y2 = f(L0^R0^y1^key);
+        int y2 = f(L0^R0^y1^k2);
         int a2 = getBit(y2, 7)^getBit(y2, 15)^getBit(y2, 23)^getBit(y2, 31);
 
         return a1^a2;
@@ -219,10 +208,10 @@ public class MyFealLinear {
                 if(w1 == num_pairs-1) {
                     for(int k2=0; k2<1048576; k2++) {
                         int key2 = generate20BitKeyForOutterBytes(k2, key_tilda);
-                        int first_a2 = calculateConstOutteBytesk2(0, key2, key0, key1);
+                        int first_a2 = calculateConstOutteBytesk2(0, key0, key1, key2);
 
                         for(int w2=1; w2<num_pairs; w2++) {
-                            if(first_a2 != calculateConstOutteBytesk2(w2, key2, key0, key1))
+                            if(first_a2 != calculateConstOutteBytesk2(w2, key0, key1, key2))
                                 break;
 
                             if(w2 == num_pairs-1)
@@ -235,7 +224,6 @@ public class MyFealLinear {
     }
 
     static int calculateConstInnerBytesk3(int wordIndex, int key, int k0, int k1, int k2) {
-        // Split pairs
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
         int L4 = getLeft(cyphertext[wordIndex]);
@@ -256,8 +244,7 @@ public class MyFealLinear {
         return a1^a2^a3;
     }
 
-    static int calculateConstOutteBytesk3(int wordIndex, int key, int k0, int k1, int k2) {
-        // Split pairs
+    static int calculateConstOutteBytesk3(int wordIndex, int k0, int k1, int k2, int k3) {
         int L0 = getLeft(plaintext[wordIndex]);
         int R0 = getRigth(plaintext[wordIndex]);
         int L4 = getLeft(cyphertext[wordIndex]);
@@ -273,7 +260,7 @@ public class MyFealLinear {
         int y0 = f(L0^R0^k0);
         int y1 = f(L0^y0^k1);
         int y2 = f(L0^R0^y1^k2);
-        int y3 = f(L0^y0^y2^key);
+        int y3 = f(L0^y0^y2^k3);
         int a3 = getBit(y3, 7)^getBit(y3, 15)^getBit(y3, 23)^getBit(y3, 31);
 
         return a1^a2^a3;
@@ -291,10 +278,10 @@ public class MyFealLinear {
                 if(w1 == num_pairs-1) {
                     for(int k2=0; k2<1048576; k2++) {
                         int key3 = generate20BitKeyForOutterBytes(k2, key_tilda);
-                        int first_a2 = calculateConstOutteBytesk3(0, key3, key0, key1, key2);
+                        int first_a2 = calculateConstOutteBytesk3(0, key0, key1, key2, key3);
 
                         for(int w2=1; w2<num_pairs; w2++) {
-                            if(first_a2 != calculateConstOutteBytesk3(w2, key3, key0, key1, key2))
+                            if(first_a2 != calculateConstOutteBytesk3(w2, key0, key1, key2, key3))
                                 break;
 
                             if(w2 == num_pairs-1)
